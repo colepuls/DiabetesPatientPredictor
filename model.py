@@ -43,9 +43,9 @@ std = x_tensor.std(dim=0)
 std[std == 0] = 1e-7 # avoid division by zero
 
 # Normalize!!!
-x_tensor = (x_tensor - mean) / std # x tensor is now normalized column wise
+x_tensor = (x_tensor - mean) / std # x tensor is now normalized column wise, mean of 0 and std of 1
 
-class DiabetesDataset(Dataset):
+class DiabetesDataset(Dataset): # store into dataset
     def __init__(self, x, y):
         self.x = x
         self.y = y
@@ -63,70 +63,67 @@ dataset = DiabetesDataset(x_tensor, y_tensor)
 
 # 80/20 split
 train_size = int(0.8 * len(dataset))
-val_size = len(dataset) - train_size
+val_size = len(dataset) - train_size # first test against unseen data
 
 train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
-# Create data loaders
+# Create data loaders, DataLoader helps working with the data.
 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
 
-# test
-#for batch_features, batch_labels in train_loader:
-#    print(batch_features.shape, batch_labels.shape)
-#    break
-
-# compute stats after normalization
-check_mean = torch.mean(torch.vstack([dataset[i][0] for i in range(len(dataset))]), dim=0)
-check_std = torch.std(torch.vstack([dataset[i][0] for i in range(len(dataset))]), dim=0)
-
 # neural network
-class SimpleNet(nn.Module):
-    def __init__(self, input_dim, hidden_dim=16, output_dim=2):
+class Network(nn.Module):
+    def __init__(self, input_dim, hidden_dim=32, output_dim=2): # features (8), neurons (16), outputs (2) -> has diabetes (1), does not have diabetes (0)
         super().__init__()
         self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(hidden_dim, output_dim)
+        self.relu = nn.ReLU() # Rectified linear unit, max(0,a) a is a neuron.
+        self.dropout1 = nn.Dropout(p=0.3) # dropout layer, prevents overfitting (training data too closely) by randomly setting a fraction of neurons to zero during training.
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim) # 2nd hidden layer added
+        self.relu2 = nn.ReLU()
+        self.dropout2 = nn.Dropout(p=0.3)
+        self.fc3 = nn.Linear(hidden_dim, output_dim)
     
     def forward(self, x):
         x = self.relu(self.fc1(x))
-        x = self.fc2(x)
+        x = self.dropout1(x)
+        x = self.relu2(self.fc2(x))
+        x = self.dropout2(x)
+        x = self.fc3(x)
         return x
     
-model = SimpleNet(input_dim=x.shape[1])
+model = Network(input_dim=x.shape[1])
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+optimizer = optim.Adam(model.parameters(), lr=0.0005) # learning rate = 0.0005
     
 # Training
-epochs = 10
+epochs = 50
 for epoch in range(epochs):
     model.train()
     total_loss = 0
     for batch_features, batch_labels in train_loader:
-        optimizer.zero_grad()
-        outputs = model(batch_features)
-        loss = criterion(outputs, batch_labels)
-        loss.backward()
-        optimizer.step()
+        optimizer.zero_grad() # reset gradients
+        outputs = model(batch_features) # compute forward pass
+        loss = criterion(outputs, batch_labels) # calculate loss
+        loss.backward() # Backpropagation, compute gradient
+        optimizer.step() # Minimize the loss, update parameters. Update the models weights using gradients
         total_loss += loss.item()
     avg_train_loss = total_loss / len(train_loader)
 
-# Validation
-model.eval()
-val_loss = 0
+# Validation, bechmarking / testing
+model.eval()                                                # Set model to evaluation mode
+val_loss = 0                                        
 correct = 0
 total = 0
 with torch.no_grad():
-    for val_features, val_labels in val_loader:
+    for val_features, val_labels in val_loader:             # Loop through all batches of the validation data
         val_outputs = model(val_features)
         loss = criterion(val_outputs, val_labels)
-        val_loss += loss.item()
-
-        _, predicted = torch.max(val_outputs, dim=1)
+        val_loss += loss.item()                             # Calculate loss
+        _, predicted = torch.max(val_outputs, dim=1)        # Make predictions
         correct += (predicted == val_labels).sum().item()
-        total += val_labels.size(0)
+        total += val_labels.size(0)                         # Track correct predictions and total samples
 avg_val_loss = val_loss / len(val_loader)
-accuracy = 100 * correct / total
+accuracy = 100 * correct / total                            # Report metrics
 
 print(f"Epoch {epoch+1}/{epochs} | "
       f"Train Loss: {avg_train_loss:.4f} | "
@@ -134,7 +131,7 @@ print(f"Epoch {epoch+1}/{epochs} | "
       f"Val Acc: {accuracy:.2f}%")
 
 # Walkthrough
-print("Please enter the patient's details:")
+print("Enter the patient's details:")
 p = float(input("Pregnancies: ")) # number of pregnancies
 gl = float(input("Glucose: ")) # glucose level
 bp = float(input("BloodPressure: "))
