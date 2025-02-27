@@ -25,9 +25,6 @@ cols_to_clean = ["Glucose", "BloodPressure", "SkinThickness", "Insulin", "BMI"]
 for c in cols_to_clean:
     data[c].replace(0, np.nan, inplace=True)
 
-# Check how many nans are in columns
-data[cols_to_clean].isnull().sum()
-
 # Impute missing values, fill with column means
 data[cols_to_clean] = data[cols_to_clean].fillna(data[cols_to_clean].mean())
 
