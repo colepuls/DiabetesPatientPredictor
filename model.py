@@ -59,9 +59,6 @@ class DiabetesDataset(Dataset):
 # initialize dataset    
 dataset = DiabetesDataset(x_tensor, y_tensor)
 
-sample_features = dataset[0]
-sample_labels = dataset[0]
-
 # Split into training and validation sets
 
 # 80/20 split
