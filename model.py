@@ -16,7 +16,7 @@ num_dups = data.duplicated().sum()
 
 # Remove any dups
 if num_dups > 0:
-    data.drop_duplicates(inpalce=True)
+    data.drop_duplicates(inplace=True)
 
 # List columns where zeros are likely invalid or indicate missing data
 cols_to_clean = ["Glucose", "BloodPressure", "SkinThickness", "Insulin", "BMI"]
