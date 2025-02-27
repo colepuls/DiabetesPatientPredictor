@@ -8,7 +8,6 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 
-
 # Load data
 data = pd.read_csv("/Users/colepuls/CS/MUHackathon2025/Raw_data/diabetes.csv")
 
